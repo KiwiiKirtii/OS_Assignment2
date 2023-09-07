@@ -48,7 +48,9 @@ int create_process_and_run(char* command) {
     printf("Something bad happened\n");
     } else if(status == 0) {
     printf("I am the child process\n");
+    exit(0);
     } else {
+        wait(NULL);
     printf("I am the parent Shell\n");
     }
 return 0;
