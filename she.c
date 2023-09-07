@@ -12,18 +12,18 @@ char* read_user_input() {
     int length=sizeof(buffer);
 
     if (buffer==NULL){             //check for memory allocation
-        printf("memory allocation failed!!! \n");
+        printf("Memory allocation failed!!! \n");
         exit(1);
     }
 
     if (fgets(buffer, MAX, stdin)==NULL){   //check for reading user input
-        printf("could not read user code!!\n");
+        printf("Could not read user code!!\n");
         exit(1);
     }
 
     for (int i=0;i<length;i++){        //check for backslash and quotes
         if (buffer[i]=='\"'|| buffer[i]=="'"|| buffer[i]=='""'){
-            printf("invalid input contains backslashes or quotes!! \n");
+            printf("Invalid input contains backslashes or quotes!! \n");
             exit (1);
         }
     }
