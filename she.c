@@ -8,7 +8,6 @@
 char* read_user_input() {
     char* buffer = (char*)malloc(MAX * sizeof(char));
     // Read user input dynamically
-    //fgets(buffer, MAX, stdin);
 
     if (buffer==NULL){             //check for memory allocation
         printf("OS_A2@custom_shell:~$ Memory allocation failed!\n");
@@ -21,9 +20,6 @@ char* read_user_input() {
     }
     int length = strlen(buffer);
 
-    // for (int i=0; i<length; i++){
-    //     printf("%c", buffer[i]);
-    // }
 
     for (int i=0;i<length;i++){        //check for backslash and quotes
         if (buffer[i]== '\\' || buffer[i]=='"'){
@@ -32,12 +28,13 @@ char* read_user_input() {
         }
     }
 
-    for (int i=0;i<length;i++){   //replacing new line character
-        if (buffer[length-1]=="\n"){
-            buffer[length-1]="\0";
-        }
-    }
- 
+    // for (int i=0;i<length;i++){   //replacing new line character
+    //     if (buffer[length-1]=="\n"){
+    //         buffer[length-1]="\0";
+    //     }
+    // }
+
+    buffer[strcspn(buffer, "\n")] = '\0';
     return buffer;
 }
 
