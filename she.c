@@ -38,37 +38,64 @@ char* read_user_input() {
     return buffer;
 }
 
+int parse(char * buff, char** arr){
+    char* tok = strtok(buff," ");
+    int arr_size = 0;
+    while (tok != NULL){
+        arr[arr_size++] = tok;
+        tok = strtok(NULL, " ");
+        //printf("%s {}", arr[arr_size-1]);
+    }
+    arr[arr_size++] = NULL;
+    return arr_size;                                   //last is null 
+}
 
-int create_process_and_run(char* command) {
+
+int create_process_and_run(char* command, char** arr) {
+    int a_size = parse(command,arr);
+    int fd[2];
+    pipe(fd);
+    //printf("%s", arr[1]);
     int status = fork();
     if(status < 0) {
-    printf("Something bad happened\n");
-    } else if(status == 0) {
-    printf("I am the child process\n");
-    exit(0);
-    } else {
+        printf("OS_A2@custom_shell:~$ Something bad happened\n");
+    } 
+    else if(status == 0) {
+        close(fd[1]);
+        printf("OS_A2@custom_shell:~$ I am the child process\n");
+        exit(0);
+    } 
+    else {
+        close(fd[0]);
         wait(NULL);
-    printf("I am the parent Shell\n");
+        printf("OS_A2@custom_shell:~$ I am the parent Shell\n");
     }
 return 0;
 }
 
-int launch (char *command) {
+int launch (char *command, char ** arr) {
     int status;
-    status = create_process_and_run(command);
+    status = create_process_and_run(command, arr);
     return status;
 }
 
 void shell_loop() {
     int status;
     do {
+        char** arr = (char**)malloc(MAX * sizeof(char*));
+        if (arr==NULL){             //check for memory allocation
+        printf("OS_A2@custom_shell:~$ Memory allocation failed!\n");
+        exit(1);
+        }
         printf("OS_A2@custom_shell:~$ ");
         char* command = read_user_input();
-        status = launch(command);
+        status = launch(command,arr);
         free(command); // Free the dynamically allocated input
+        free(arr);
         //status = 1;
     } while (!status);
 }
+
 
 int main() {
     shell_loop();
