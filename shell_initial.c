@@ -1,16 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#define MAX 1000
 
 // Function to read user input (you need to implement this)
 char* read_user_input() {
-    char* input = NULL;
-    size_t len = 0;
-    ssize_t read;
+    char* buffer = (char*)malloc(MAX * sizeof(char));;
     
-    printf("iiitd@possum:~$ ");
+    printf("OS_A2@custom_shell:~$ ");
     
     // Read user input dynamically
-    read = getline(&input, &len, stdin);
+    fgets(buffer, MAX, stdin);
     
     if (read == -1) {
         printf("getline");
@@ -22,13 +22,13 @@ char* read_user_input() {
         input[read - 1] = '\0';
     }
     
-    return input;
+    return buffer;
 }
 
 int launch (char *command) {
-int status;
-status = create_process_and_run(command);
-return status;
+    int status;
+    status = create_process_and_run(command);
+    return status;
 }
 
 
@@ -79,6 +79,8 @@ int create_process_and_run(char* command) {
     
     return 0; // Success
 }
+
+
 
 void shell_loop() {
     int status;
