@@ -51,8 +51,8 @@ int parse(char * buff, char** arr){
 }
 
 
-int create_process_and_run(char* command, char** arr) {
-    int a_size = parse(command,arr);
+int create_process_and_run(char* command) {
+    //int a_size = parse(command,arr);
     int fd[2];
     pipe(fd);
     //printf("%s", arr[1]);
@@ -62,36 +62,54 @@ int create_process_and_run(char* command, char** arr) {
     } 
     else if(status == 0) {
         close(fd[1]);
+        char buff[MAX];
+        read(fd[0], buff, sizeof(buff));
+
+        char** arr = (char**)malloc(MAX * sizeof(char*));
+
+        if (arr==NULL){             //check for memory allocation
+            printf("OS_A2@custom_shell:~$ Memory allocation failed!\n");
+            exit(1);
+        }
+
+        int arg_size = parse(buff, arr);           //arr contains args
+        execvp(arr[0],arr);
+
         printf("OS_A2@custom_shell:~$ I am the child process\n");
+
+        close(fd[0]);
         exit(0);
     } 
     else {
         close(fd[0]);
+        write(fd[1], command, strlen(command));
         wait(NULL);
         printf("OS_A2@custom_shell:~$ I am the parent Shell\n");
+
+        close(fd[1]);
     }
 return 0;
 }
 
-int launch (char *command, char ** arr) {
+int launch (char *command) {
     int status;
-    status = create_process_and_run(command, arr);
+    status = create_process_and_run(command);
     return status;
 }
 
 void shell_loop() {
     int status;
     do {
-        char** arr = (char**)malloc(MAX * sizeof(char*));
-        if (arr==NULL){             //check for memory allocation
-        printf("OS_A2@custom_shell:~$ Memory allocation failed!\n");
-        exit(1);
-        }
+        // char** arr = (char**)malloc(MAX * sizeof(char*));
+        // if (arr==NULL){             //check for memory allocation
+        // printf("OS_A2@custom_shell:~$ Memory allocation failed!\n");
+        // exit(1);
+        // }
         printf("OS_A2@custom_shell:~$ ");
         char* command = read_user_input();
-        status = launch(command,arr);
+        status = launch(command);
         free(command); // Free the dynamically allocated input
-        free(arr);
+        //free(arr);
         //status = 1;
     } while (!status);
 }
