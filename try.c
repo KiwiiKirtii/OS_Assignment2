@@ -51,33 +51,33 @@ int parse(char * buff, char** arr, char* delimiter){
 
 
 int create_process_and_run(char* command) {
-    char* commands[MAX];
-    int num_commands = parse(command, commands, "|");
+    char* arr[MAX];
+    int arr_size = parse(command, arr, "|");
 
     int prev_pipe[2];
     int curr_pipe[2];
 
-    for (int i = 0; i < num_commands; i++) {
+    for (int i = 0; i < arr_size; i++) {
         // Create a new pipe for the current command
-        if (i < num_commands - 1) {
+        if (i < arr_size - 1) {                         //dont need for last
             if (pipe(curr_pipe) == -1) {
                 perror("pipe");
                 exit(1);
             }
         }
 
-        int pid = fork();
-        if (pid == -1) {
+        int status = fork();
+        if (status == -1) {
             perror("fork");
             exit(1);
-        } else if (pid == 0) { // Child process
+        } else if (status == 0) { // Child process
             // Close unnecessary pipe ends
             if (i > 0) {
                 close(prev_pipe[1]); // Close write end of the previous pipe
                 dup2(prev_pipe[0], STDIN_FILENO); // Connect stdin to the read end of the previous pipe
                 close(prev_pipe[0]);
             }
-            if (i < num_commands - 1) {
+            if (i < arr_size - 1) {
                 close(curr_pipe[0]); // Close read end of the current pipe
                 dup2(curr_pipe[1], STDOUT_FILENO); // Connect stdout to the write end of the current pipe
                 close(curr_pipe[1]);
@@ -85,7 +85,7 @@ int create_process_and_run(char* command) {
 
             // Execute the command
             char** args = (char**)malloc(MAX * sizeof(char*));
-            int arg_size = parse(commands[i], args, " ");
+            int arg_size = parse(arr[i], args, " ");
             execvp(args[0], args);
             perror("execvp");
             exit(1);
@@ -95,7 +95,7 @@ int create_process_and_run(char* command) {
                 close(prev_pipe[0]);
                 close(prev_pipe[1]);
             }
-            if (i < num_commands - 1) {
+            if (i < arr_size - 1) {
                 prev_pipe[0] = curr_pipe[0];
                 prev_pipe[1] = curr_pipe[1];
             }

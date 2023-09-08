@@ -73,7 +73,7 @@ int create_process_and_run(char* command) {
             wait(NULL);
         }
     } else {
-        int pipes[arg_size - 1][2];  // Create an array of pipes
+        int pipes[arg_size][2];  // Create an array of pipes
 
         for (int i = 0; i < arg_size; i++) {
             if (i < arg_size - 1) {
@@ -96,6 +96,9 @@ int create_process_and_run(char* command) {
                     dup2(pipes[i][1], STDOUT_FILENO);  // Redirect stdout to the current pipe
                     close(pipes[i][1]);
                 }
+                // if (i == arg_size -1){
+                //     close(pipes[i][0]);
+                // }
 
                 char** args = (char**)malloc(MAX * sizeof(char*));
                 parse(arr[i], args, " ");
@@ -113,8 +116,9 @@ int create_process_and_run(char* command) {
                 if (i == arg_size - 1) {
                     close(pipes[i][0]);  // Close the read end of the last pipe
                     close(pipes[i][1]);  // Close the write end of the last pipe
-                    wait(NULL);
+                    
                 }
+                wait(NULL);
             } else {
                 printf("Something bad happened.\n");
             }
