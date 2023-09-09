@@ -88,7 +88,10 @@ int create_process_and_run(char* command) {
         } else if (status < 0) {
             printf("Something bad happened.\n");
         } else {
+            
             wait(NULL);
+            
+
         }
     } else {
         int pipes[arg_size][2];  // Create an array of pipes

@@ -5,15 +5,20 @@
 #define MAX 1000
 
 char** globalinputs; //declaring global variable to access in different functions //history
-int globalcount;   //history
+int globalcount = 0;   //histoy
+int globalstart,globalend,globalpid,globalhcount; //time
+// int globalend;
+// int globalpid;
+int ** globalstarttime;  //time
+int ** globalruntime;
+int**globalprocessid;
+// int globalhcount;
 
 void show_history(){     //history
     for(int i=0;i<globalcount;i++){
-        printf("%s \n",globalinputs[i]);
+        printf("%d. %s \n", i+1, globalinputs[i]);
     }
-    exit(0);
 }
-
 
 // Function to read user input
 char* read_user_input() {
@@ -52,101 +57,120 @@ char* read_user_input() {
 int parse(char * buff, char** arr, char* delimiter){
     char* tok = strtok(buff,delimiter);
     int arr_size = 0;
-    while (tok != NULL ){            
+    while (tok != NULL ){            //////////////////////////////////////////
         arr[arr_size++] = tok;
         tok = strtok(NULL, delimiter);
     }
-    arr[arr_size++] = NULL;
-    return arr_size;                                   //last is null 
+    arr[arr_size] = NULL;
+    return arr_size;                                   //last is null but not added to returned size
 }
 
 
 int create_process_and_run(char* command) {
-    char* arr[MAX];
-    //int a_size = parse(command,arr);
-    //printf("%s", arr[1]);
-    int status = fork();
-    if(status < 0) {
-        printf("OS_A2@custom_shell:~$ Something bad happened\n");
-    } 
-    else if(status == 0) {
-       char* command = read_user_input();  
-       int arg_size = parse(command, arr, "|");                            
-        if (arr==NULL){             //check for memory allocation
-            printf("OS_A2@custom_shell:~$ Memory allocation failed!\n");
-            exit(1);
-        }
-        
-        // char* token = strtok(command, " | ");
-        // printf("%s+ ", token);
-                   //arr contains args, actual size is -1 as null separated
-        
-        // for (int i=0; i<arg_size; i++){
-        //     printf("%s+ ", arr[i]);
-        // }
-        // printf("%d", arg_size);
-        int fd[arg_size-1][2];
-        for (int i=0; i<arg_size-1; i++){
-            pipe(fd[i]);                                    //handle error here
-        }
-        if (arg_size - 1 == 1){            // this means that | delimiter doesnt exist
+    char** arr = (char**)malloc(MAX * sizeof(char*));
+    if (arr == NULL) {
+        printf("OS_A2@custom_shell:~$ Memory allocation failed!\n");
+        exit(1);
+    }
+
+    globalinputs[globalcount++] = strdup(command);
+
+    int arg_size = parse(command, arr, "|");
+    // for (int j=0; j<arg_size; j++){
+    //     globalinputs[globalcount] = strdup(arr[j]);
+    //     globalcount+=1;
+    // }
+    if (arg_size == 1) {
+        // If there's only one command, no need for pipes
+        int status = fork();
+        if (status == 0) {
             char** args = (char**)malloc(MAX * sizeof(char*));
-            parse(command, args, " ");
-            globalinputs[globalcount]=args;   //history
-            globalcount+=1;                 //history
-            execvp(args[0],args);
+            parse(arr[0], args, " ");
+            //globalinputs[globalcount]=arr[0];   //history
+            //globalcount+=1;                 //history
             
+            execvp(args[0], args);
+            perror("execvp");
+            exit(1);
+        } else if (status < 0) {
+            printf("Something bad happened.\n");
+        } else {
+            globalstart=clock();     //time
+            globalprocessid[globalhcount]=wait(NULL);  //pid
+            globalend=clock();
+            globalruntime[globalhcount]=globalend-globalstart; //time
+            globalstarttime[globalhcount]=globalstart;
+            globalhcount+=1;
         }
+    } else {
+        int pipes[arg_size][2];  // Create an array of pipes
 
-        else{
-            for (int i=0; i<arg_size-1; i++){
-                int stat = fork();
-                if (stat < 0){
-                    printf("Something bad happened.\n");
-                }
-                else if (stat == 0){
-                    if (i != 0){         //reading from previous
-                        close(fd[i-1][1]);
-                        dup2(fd[i-1][0], STDIN_FILENO);
-                        //close(fd[i-1][0]);
-                    }
-                    //writing to current
-
-                    close(fd[i][0]);
-                    dup2(fd[i][1], STDOUT_FILENO);
-                    //close(fd[i][1]);
-
-                    char** childargs = (char**)malloc(MAX * sizeof(char*));
-                    int a1 = parse(arr[i], childargs, " ");
-                    for (int i=0; i<a1; i++){
-                            printf("%s+ ", childargs[i]);
-                        }
-
-
-                    globalinputs[globalcount]=childargs + fd[i-1][0];   //history
-                    globalcount+=1;                 //history
-                    execvp(childargs[0], childargs + fd[i-1][0]);
-                    exit(0);
-                }else{
-                    if (i!=0){
-                        close(fd[i-1][0]);
-                    }
-                    if (i == arg_size-2){
-                        close(fd[i][1]);
-                    }
-                    wait(NULL);
-                    
+        for (int i = 0; i < arg_size; i++) {
+            if (i < arg_size - 1) {
+                if (pipe(pipes[i]) == -1) {
+                    perror("pipe");
+                    exit(1);
                 }
             }
-        }
-        exit(0);
 
-    } 
-    else {
-        wait(NULL);
-        printf("OS_A2@custom_shell:~$ I am the parent Shell\n");
+            int stat = fork();
+            if (stat == 0) {
+                // Child process
+                if (i > 0) {
+                    close(pipes[i - 1][1]);  // Close the write end of the previous pipe
+                    dup2(pipes[i - 1][0], STDIN_FILENO);  // Redirect stdin from the previous pipe
+                    close(pipes[i - 1][0]);
+                }
+                if (i < arg_size - 1) {
+                    close(pipes[i][0]);  // Close the read end of the current pipe
+                    dup2(pipes[i][1], STDOUT_FILENO);  // Redirect stdout to the current pipe
+                    close(pipes[i][1]);
+                }
+                // if (i == arg_size -1){
+                //     close(pipes[i][0]);
+                // }
+
+                char** args = (char**)malloc(MAX * sizeof(char*));
+                parse(arr[i], args, " ");
+                //globalinputs[globalcount]=arr[i];   //history
+                //globalcount+=1;                 //history
+                execvp(args[0], args);
+                perror("execvp");
+                exit(1);
+            } else if (stat > 0) {
+                // Parent process
+                globalstart=clock();
+                globalstarttime[globalhcount]=globalstart;
+                if (i > 0) {
+                    close(pipes[i - 1][0]);  // Close the read end of the previous pipe
+                    close(pipes[i - 1][1]);  // Close the write end of the previous pipe
+                }
+
+                // In the last iteration, wait for the last child process to complete
+                if (i == arg_size - 1) {
+                    close(pipes[i][0]);  // Close the read end of the last pipe
+                    close(pipes[i][1]);  // Close the write end of the last pipe
+                    
+                }
+                globalprocessid[globalhcount]=wait(NULL);
+                globalend=clock();
+                globalruntime[globalhcount]=globalend-globalstart;
+                globalhcount+=1;
+
+            } else {
+                printf("Something bad happened.\n");
+            }
+        }
     }
-return 0;
+
+    return 0;
+}
+
+void process_info(){
+    printf("Command Name                    PID              Start Time           Run Time\n");
+    for (int i=0;i<globalhcount;i++){
+        printf("%s                    %d              %d           %d\n",globalinputs[i],globalprocessid[i],globalstarttime[i],globalruntime[i]);
+    }
 }
 
 int launch (char *command) {
@@ -160,22 +184,35 @@ void shell_loop() {
     do {
         printf("OS_A2@custom_shell:~$ ");
         char* command = read_user_input();
-        if ((strcmp(command, "history") == 0)){    //history
+        if ((strcmp(command, "history")) != 0){
+            status = launch(command);
+        }
+        
+        else if ((strcmp(command, "history") == 0)){    //history
+            globalstart=clock();
+            globalstarttime[globalhcount]=globalstart;
             globalinputs[globalcount]="history";  //history
             globalcount+=1;    //history
             show_history(); //history
+            globalprocessid[globalhcount]=NULL;
+            globalend=clock();
+            globalruntime[globalhcount]=globalend-globalstart;
+            globalhcount+=1;
         }
-
-        status = launch(command);
         free(command); // Free the dynamically allocated input
     } while (!status);
 }
 
 
-
 int main() {
+    globalend=0;
+    globalstart=0; //time
+    globalpid=0;
+    globalcount=0;
+    globalstarttime=(int**)malloc(MAX*sizeof(int*));
+    globalruntime=(int**)malloc(MAX*sizeof(int*));
+    globalprocessid=(int**)malloc(MAX*sizeof(int*));
     globalinputs=(char**)malloc(MAX*sizeof(char*)); //history
-    globalcount=0;//history
     shell_loop();
     return 0;
 }
