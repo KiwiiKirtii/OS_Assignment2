@@ -5,13 +5,12 @@
 #define MAX 1000
 
 char** globalinputs; //declaring global variable to access in different functions //history
-int globalcount;   //history
+int globalcount = 0;   //history
 
 void show_history(){     //history
     for(int i=0;i<globalcount;i++){
-        printf("%s \n",globalinputs[i]);
+        printf("%d. %s \n", i+1, globalinputs[i]);
     }
-    exit(0);
 }
 
 // Function to read user input
@@ -67,15 +66,21 @@ int create_process_and_run(char* command) {
         exit(1);
     }
 
+    globalinputs[globalcount++] = strdup(command);
+
     int arg_size = parse(command, arr, "|");
+    // for (int j=0; j<arg_size; j++){
+    //     globalinputs[globalcount] = strdup(arr[j]);
+    //     globalcount+=1;
+    // }
     if (arg_size == 1) {
         // If there's only one command, no need for pipes
         int status = fork();
         if (status == 0) {
             char** args = (char**)malloc(MAX * sizeof(char*));
             parse(arr[0], args, " ");
-            globalinputs[globalcount]=args;   //history
-            globalcount+=1;                 //history
+            //globalinputs[globalcount]=arr[0];   //history
+            //globalcount+=1;                 //history
             
             execvp(args[0], args);
             perror("execvp");
@@ -115,8 +120,8 @@ int create_process_and_run(char* command) {
 
                 char** args = (char**)malloc(MAX * sizeof(char*));
                 parse(arr[i], args, " ");
-                 globalinputs[globalcount]=args;   //history
-                globalcount+=1;                 //history
+                //globalinputs[globalcount]=arr[i];   //history
+                //globalcount+=1;                 //history
                 execvp(args[0], args);
                 perror("execvp");
                 exit(1);
@@ -155,12 +160,15 @@ void shell_loop() {
     do {
         printf("OS_A2@custom_shell:~$ ");
         char* command = read_user_input();
-        if ((strcmp(command, "history") == 0)){    //history
+        if ((strcmp(command, "history")) != 0){
+            status = launch(command);
+        }
+        
+        else if ((strcmp(command, "history") == 0)){    //history
             globalinputs[globalcount]="history";  //history
             globalcount+=1;    //history
             show_history(); //history
         }
-        status = launch(command);
         free(command); // Free the dynamically allocated input
     } while (!status);
 }
@@ -168,7 +176,6 @@ void shell_loop() {
 
 int main() {
     globalinputs=(char**)malloc(MAX*sizeof(char*)); //history
-    globalcount=0;//history
     shell_loop();
     return 0;
 }
