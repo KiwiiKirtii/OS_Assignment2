@@ -198,6 +198,7 @@ void shell_loop() {
             globalend=clock();
             globalruntime[globalhcount]=globalend-globalstart;
             globalhcount+=1;
+            //process_info();
         }
         free(command); // Free the dynamically allocated input
     } while (!status);
