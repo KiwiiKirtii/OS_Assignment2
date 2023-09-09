@@ -179,9 +179,11 @@ int create_process_and_run(char* command) {
 }
 
 void process_info(){
-    printf("Command Name                    PID              Start Time           Run Time\n");
+    printf("%-50s%-15s%-15s%-15s\n", "Command Name", "PID", "Start Time", "Run Time");
     for (int i=0;i<globalhcount;i++){
-        printf("%s                    %d              %ld           %d\n",globalinputs[i],globalprocessid[i],globaltime[i],globalruntime[i]);
+        // char* startTimeStr = ctime(&globaltime[i]);
+        // startTimeStr[strcspn(startTimeStr, "\n")] = '\0';
+        printf("%-50s%-15d%-15ld%-15d\n",globalinputs[i],globalprocessid[i],globaltime[i],globalruntime[i]);
     }
 }
 
