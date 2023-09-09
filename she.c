@@ -4,6 +4,17 @@
 #include <string.h>
 #define MAX 1000
 
+char** globalinputs; //declaring global variable to access in different functions //history
+int globalcount;   //history
+
+void show_history(){     //history
+    for(int i=0;i<globalcount;i++){
+        printf("%s \n",globalinputs[i]);
+    }
+    exit(0);
+}
+
+
 // Function to read user input
 char* read_user_input() {
     char* buffer = (char*)malloc(MAX * sizeof(char));
@@ -41,7 +52,7 @@ char* read_user_input() {
 int parse(char * buff, char** arr, char* delimiter){
     char* tok = strtok(buff,delimiter);
     int arr_size = 0;
-    while (tok != NULL ){            //////////////////////////////////////////
+    while (tok != NULL ){            
         arr[arr_size++] = tok;
         tok = strtok(NULL, delimiter);
     }
@@ -51,6 +62,7 @@ int parse(char * buff, char** arr, char* delimiter){
 
 
 int create_process_and_run(char* command) {
+    char* arr[MAX];
     //int a_size = parse(command,arr);
     //printf("%s", arr[1]);
     int status = fork();
@@ -58,14 +70,19 @@ int create_process_and_run(char* command) {
         printf("OS_A2@custom_shell:~$ Something bad happened\n");
     } 
     else if(status == 0) {
-        char** arr = (char**)malloc(MAX * sizeof(char*));
+       char* command = read_user_input();  
+       int arg_size = parse(command, arr, "|");                            
         if (arr==NULL){             //check for memory allocation
             printf("OS_A2@custom_shell:~$ Memory allocation failed!\n");
             exit(1);
         }
+        for (int i=0; i<arg_size-1; i++){   //history
+            globalinputs[globalcount]=arr[i];           //history
+            globalcount+=1;                       //history
+        }
         // char* token = strtok(command, " | ");
         // printf("%s+ ", token);
-        int arg_size = parse(command, arr, "|");           //arr contains args, actual size is -1 as null separated
+                   //arr contains args, actual size is -1 as null separated
         
         // for (int i=0; i<arg_size; i++){
         //     printf("%s+ ", arr[i]);
@@ -75,10 +92,12 @@ int create_process_and_run(char* command) {
         for (int i=0; i<arg_size-1; i++){
             pipe(fd[i]);                                    //handle error here
         }
-        if (arg_size - 1 == 1){
+        if (arg_size - 1 == 1){            // this means that | delimiter doesnt exist
             char** args = (char**)malloc(MAX * sizeof(char*));
             parse(command, args, " ");
             execvp(args[0],args);
+            // globalinputs[globalcount]=command;   //history
+            // globalcount+=1;                 //history
         }
 
         else{
@@ -142,13 +161,22 @@ void shell_loop() {
     do {
         printf("OS_A2@custom_shell:~$ ");
         char* command = read_user_input();
+        if ((strcmp(command, "history") == 0)){    //history
+            globalinputs[globalcount]="history";  //history
+            globalcount+=1;    //history
+            show_history(); //history
+        }
+
         status = launch(command);
         free(command); // Free the dynamically allocated input
     } while (!status);
 }
 
 
+
 int main() {
+    globalinputs=(char**)malloc(MAX*sizeof(char*)); //history
+    globalcount=0;//history
     shell_loop();
     return 0;
 }
