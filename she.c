@@ -76,10 +76,7 @@ int create_process_and_run(char* command) {
             printf("OS_A2@custom_shell:~$ Memory allocation failed!\n");
             exit(1);
         }
-        for (int i=0; i<arg_size-1; i++){   //history
-            globalinputs[globalcount]=arr[i];           //history
-            globalcount+=1;                       //history
-        }
+        
         // char* token = strtok(command, " | ");
         // printf("%s+ ", token);
                    //arr contains args, actual size is -1 as null separated
@@ -95,9 +92,10 @@ int create_process_and_run(char* command) {
         if (arg_size - 1 == 1){            // this means that | delimiter doesnt exist
             char** args = (char**)malloc(MAX * sizeof(char*));
             parse(command, args, " ");
+            globalinputs[globalcount]=args;   //history
+            globalcount+=1;                 //history
             execvp(args[0],args);
-            // globalinputs[globalcount]=command;   //history
-            // globalcount+=1;                 //history
+            
         }
 
         else{
@@ -125,7 +123,8 @@ int create_process_and_run(char* command) {
                         }
 
 
-
+                    globalinputs[globalcount]=childargs + fd[i-1][0];   //history
+                    globalcount+=1;                 //history
                     execvp(childargs[0], childargs + fd[i-1][0]);
                     exit(0);
                 }else{
