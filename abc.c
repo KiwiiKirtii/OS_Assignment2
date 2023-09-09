@@ -11,6 +11,7 @@ void show_history(){     //history
     for(int i=0;i<globalcount;i++){
         printf("%s \n",globalinputs[i]);
     }
+    exit(0);
 }
 
 // Function to read user input
@@ -67,20 +68,14 @@ int create_process_and_run(char* command) {
     }
 
     int arg_size = parse(command, arr, "|");
-
-    for (int i=0;i<arg_size;i++){
-        globalinputs[globalcount]=arr[i];
-        globalcount+=1;
-    }
-
     if (arg_size == 1) {
         // If there's only one command, no need for pipes
         int status = fork();
         if (status == 0) {
             char** args = (char**)malloc(MAX * sizeof(char*));
             parse(arr[0], args, " ");
-            // globalinputs[globalcount]=args;   //history
-            // globalcount+=1;                 //history
+            globalinputs[globalcount]=args;   //history
+            globalcount+=1;                 //history
             
             execvp(args[0], args);
             perror("execvp");
@@ -120,8 +115,8 @@ int create_process_and_run(char* command) {
 
                 char** args = (char**)malloc(MAX * sizeof(char*));
                 parse(arr[i], args, " ");
-                //  globalinputs[globalcount]=args;   //history
-                // globalcount+=1;                 //history
+                 globalinputs[globalcount]=args;   //history
+                globalcount+=1;                 //history
                 execvp(args[0], args);
                 perror("execvp");
                 exit(1);
