@@ -164,6 +164,9 @@ int create_process_and_run(char* command) {
                     globalhcount+=1;
                     
                 }
+                else{
+                    wait(NULL);
+                }
                 
 
             } else {
