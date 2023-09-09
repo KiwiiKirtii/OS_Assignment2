@@ -8,13 +8,14 @@
 
 char** globalinputs; //declaring global variable to access in different functions //history
 int globalcount = 0;   //histoy
-int globalstart,globalend,globalpid,globalhcount; //time
+int globalpid = 0,globalhcount = 0; //time
+double globalstart = 0, globalend = 0; 
 // int globalend;
 // int globalpid;
-int ** globalstarttime;  //time
-int ** globalruntime;
-int**globalprocessid;
-time_t** globaltime[20];
+double * globalstarttime;  //time
+double * globalruntime;
+int* globalprocessid;
+time_t* globaltime[20];
 time_t globalcurrenttime;
 // int globalhcount;
 
@@ -100,11 +101,11 @@ int create_process_and_run(char* command) {
             printf("Something bad happened.\n");
         } else {
             globalcurrenttime=time(NULL);
-            globaltime[globalhcount]=globalcurrenttime;
+            globaltime[globalhcount]=strdup(ctime(&globalcurrenttime));
             globalstart=clock();     //time
             globalprocessid[globalhcount]=wait(NULL);  //pid
             globalend=clock();
-            globalruntime[globalhcount]=globalend-globalstart; //time
+            globalruntime[globalhcount]= (globalend-globalstart) / CLOCKS_PER_SEC; //time
             globalstarttime[globalhcount]=globalstart;
             globalhcount+=1;
         }
@@ -154,14 +155,14 @@ int create_process_and_run(char* command) {
                 // In the last iteration, wait for the last child process to complete
                 if (i == arg_size - 1) {
                     globalcurrenttime=time(NULL);
-                    globaltime[globalhcount]=globalcurrenttime;
+                    globaltime[globalhcount]=strdup(ctime(&globalcurrenttime));
                     globalstart=clock();
                     globalstarttime[globalhcount]=globalstart;
                     close(pipes[i][0]);  // Close the read end of the last pipe
                     close(pipes[i][1]);  // Close the write end of the last pipe
                     globalprocessid[globalhcount]=wait(NULL);
                     globalend=clock();
-                    globalruntime[globalhcount]=globalend-globalstart;
+                    globalruntime[globalhcount]=(globalend-globalstart) / CLOCKS_PER_SEC;
                     globalhcount+=1;
                     
                 }
@@ -179,12 +180,15 @@ int create_process_and_run(char* command) {
     return 0;
 }
 
-void process_info(){
-    printf("%-50s%-15s%-15s%-15s\n", "Command Name", "PID", "Start Time", "Run Time");
-    for (int i=0;i<globalhcount;i++){
-        // char* startTimeStr = ctime(&globaltime[i]);
-        // startTimeStr[strcspn(startTimeStr, "\n")] = '\0';
-        printf("%-50s%-15d%-15ld%-15d\n",globalinputs[i],globalprocessid[i],globaltime[i],globalruntime[i]);
+void process_info() {
+    printf("%-50s%-15s%-15s%-30s\n", "Command Name", "PID", "Run Time", "Start Time");
+    for (int i = 0; i < globalhcount; i++) {
+        // Remove the newline character from globaltime[i]
+        char* new = strchr(globaltime[i], '\n');
+        if (new != NULL) {
+            *new = '\0';
+        }
+        printf("%-50s%-15d%-15f%-30s\n", globalinputs[i], globalprocessid[i], globalruntime[i], globaltime[i]);
     }
 }
 
@@ -205,7 +209,7 @@ void shell_loop() {
         
         else if ((strcmp(command, "history") == 0)){    //history
             globalcurrenttime=time(NULL);
-            globaltime[globalhcount]=globalcurrenttime;
+            globaltime[globalhcount]=strdup(ctime(&globalcurrenttime));
             globalstart=clock();
             globalstarttime[globalhcount]=globalstart;
             globalinputs[globalcount]="history";  //history
@@ -213,7 +217,7 @@ void shell_loop() {
             show_history(); //history
             globalprocessid[globalhcount]=NULL;
             globalend=clock();
-            globalruntime[globalhcount]=globalend-globalstart;
+            globalruntime[globalhcount]=(globalend-globalstart) / CLOCKS_PER_SEC;
             globalhcount+=1;
             //process_info();
         }
@@ -231,13 +235,9 @@ static void personal_handler(int signum){
 }
 
 int main() {
-    globalend=0;
-    globalstart=0; //time
-    globalpid=0;
-    globalcount=0;
-    globalstarttime=(int**)malloc(MAX*sizeof(int*));
-    globalruntime=(int**)malloc(MAX*sizeof(int*));
-    globalprocessid=(int**)malloc(MAX*sizeof(int*));
+    globalstarttime=(double*)malloc(MAX*sizeof(double));
+    globalruntime=(double*)malloc(MAX*sizeof(double));
+    globalprocessid=(int*)malloc(MAX*sizeof(int));
     globalinputs=(char**)malloc(MAX*sizeof(char*)); //history
     //globaltime=(time_t**)malloc(MAX*sizeof(time_t*));
     globalcurrenttime=time(NULL);
