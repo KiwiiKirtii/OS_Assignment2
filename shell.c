@@ -11,6 +11,7 @@ void show_history(){     //history
     for(int i=0;i<globalcount;i++){
         printf("%s \n",globalinputs[i]);
     }
+
 }
 
 // Function to read user input
@@ -163,9 +164,10 @@ void shell_loop() {
         if ((strcmp(command, "history") == 0)){    //history
             globalinputs[globalcount]="history";  //history
             globalcount+=1;    //history
-            show_history(); //history
+             //history
         }
         status = launch(command);
+        show_history();
         free(command); // Free the dynamically allocated input
     } while (!status);
 }
