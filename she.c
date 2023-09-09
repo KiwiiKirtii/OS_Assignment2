@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <string.h>
 #define MAX 1000
+#include <time.h>
 
 char** globalinputs; //declaring global variable to access in different functions //history
 int globalcount = 0;   //histoy
@@ -12,6 +13,8 @@ int globalstart,globalend,globalpid,globalhcount; //time
 int ** globalstarttime;  //time
 int ** globalruntime;
 int**globalprocessid;
+time_t** globaltime[20];
+time_t globalcurrenttime;
 // int globalhcount;
 
 void show_history(){     //history
@@ -95,6 +98,8 @@ int create_process_and_run(char* command) {
         } else if (status < 0) {
             printf("Something bad happened.\n");
         } else {
+            globalcurrenttime=time(NULL);
+            globaltime[globalhcount]=globalcurrenttime;
             globalstart=clock();     //time
             globalprocessid[globalhcount]=wait(NULL);  //pid
             globalend=clock();
@@ -139,8 +144,7 @@ int create_process_and_run(char* command) {
                 exit(1);
             } else if (stat > 0) {
                 // Parent process
-                globalstart=clock();
-                globalstarttime[globalhcount]=globalstart;
+                
                 if (i > 0) {
                     close(pipes[i - 1][0]);  // Close the read end of the previous pipe
                     close(pipes[i - 1][1]);  // Close the write end of the previous pipe
@@ -148,14 +152,19 @@ int create_process_and_run(char* command) {
 
                 // In the last iteration, wait for the last child process to complete
                 if (i == arg_size - 1) {
+                    globalcurrenttime=time(NULL);
+                    globaltime[globalhcount]=globalcurrenttime;
+                    globalstart=clock();
+                    globalstarttime[globalhcount]=globalstart;
                     close(pipes[i][0]);  // Close the read end of the last pipe
                     close(pipes[i][1]);  // Close the write end of the last pipe
+                    globalprocessid[globalhcount]=wait(NULL);
+                    globalend=clock();
+                    globalruntime[globalhcount]=globalend-globalstart;
+                    globalhcount+=1;
                     
                 }
-                globalprocessid[globalhcount]=wait(NULL);
-                globalend=clock();
-                globalruntime[globalhcount]=globalend-globalstart;
-                globalhcount+=1;
+                
 
             } else {
                 printf("Something bad happened.\n");
@@ -169,7 +178,7 @@ int create_process_and_run(char* command) {
 void process_info(){
     printf("Command Name                    PID              Start Time           Run Time\n");
     for (int i=0;i<globalhcount;i++){
-        printf("%s                    %d              %d           %d\n",globalinputs[i],globalprocessid[i],globalstarttime[i],globalruntime[i]);
+        printf("%s                    %d              %ld           %d\n",globalinputs[i],globalprocessid[i],globaltime[i],globalruntime[i]);
     }
 }
 
@@ -189,6 +198,8 @@ void shell_loop() {
         }
         
         else if ((strcmp(command, "history") == 0)){    //history
+            globalcurrenttime=time(NULL);
+            globaltime[globalhcount]=globalcurrenttime;
             globalstart=clock();
             globalstarttime[globalhcount]=globalstart;
             globalinputs[globalcount]="history";  //history
@@ -198,7 +209,7 @@ void shell_loop() {
             globalend=clock();
             globalruntime[globalhcount]=globalend-globalstart;
             globalhcount+=1;
-            //process_info();
+            process_info();
         }
         free(command); // Free the dynamically allocated input
     } while (!status);
@@ -214,6 +225,8 @@ int main() {
     globalruntime=(int**)malloc(MAX*sizeof(int*));
     globalprocessid=(int**)malloc(MAX*sizeof(int*));
     globalinputs=(char**)malloc(MAX*sizeof(char*)); //history
+    //globaltime=(time_t**)malloc(MAX*sizeof(time_t*));
+    globalcurrenttime=time(NULL);
     shell_loop();
     return 0;
 }
