@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <string.h>
 #define MAX 1000
+#include <signal.h>
 #include <time.h>
 
 char** globalinputs; //declaring global variable to access in different functions //history
@@ -214,12 +215,20 @@ void shell_loop() {
             globalend=clock();
             globalruntime[globalhcount]=globalend-globalstart;
             globalhcount+=1;
-            process_info();
+            //process_info();
         }
         free(command); // Free the dynamically allocated input
     } while (!status);
 }
 
+
+static void personal_handler(int signum){
+    if (signum == SIGINT){
+        printf(" \nExit log.\n");
+        process_info();
+        exit(1);
+    }
+}
 
 int main() {
     globalend=0;
@@ -232,6 +241,11 @@ int main() {
     globalinputs=(char**)malloc(MAX*sizeof(char*)); //history
     //globaltime=(time_t**)malloc(MAX*sizeof(time_t*));
     globalcurrenttime=time(NULL);
+
+    struct sigaction sig;
+    memset(&sig, 0, sizeof(sig));
+    sig.sa_handler = personal_handler;
+    sigaction(SIGINT, &sig, NULL);
     shell_loop();
     return 0;
 }
