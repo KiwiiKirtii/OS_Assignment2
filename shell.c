@@ -192,36 +192,32 @@ void shell_loop() {
                 flag = 1;
             }
         }
-        if ((strcmp(command, "history")) != 0 && flag == 0 && (strcmp(command, "./script.sh") != 0) && (strcmp(command, "sh script.sh")!=0)&&(strcmp(command, "bash script.sh")!= 0)){
+        if ((strcmp(command, "history")) != 0 && flag == 0){
             status = launch(command);
         }
-        
+        // making history also using fork
         else if ((strcmp(command, "history") == 0) && flag == 0){    //history
-            globalcurrenttime=time(NULL);
-            globaltime[globalhcount]=strdup(ctime(&globalcurrenttime));
-            gettimeofday(&globalstart, NULL);
-            globalinputs[globalcount]="history";  //history
-            globalcount+=1;    //history
-            show_history(); //history
-            globalprocessid[globalhcount]=NULL;
-            gettimeofday(&globalend, NULL);
-            globalruntime[globalhcount]=(globalend.tv_sec - globalstart.tv_sec) + (globalend.tv_usec - globalstart.tv_usec) / 1000000.0;
-            globalhcount+=1;
+            int history_pid = fork();
+            if (history_pid == 0){
+                show_history(); //history
+                exit(0);
+            }
+            else if (history_pid>0){
+                globalcurrenttime=time(NULL);
+                globaltime[globalhcount]=strdup(ctime(&globalcurrenttime));
+                gettimeofday(&globalstart, NULL);
+                globalinputs[globalcount]="history";  //history
+                globalcount+=1;    //history
+                globalprocessid[globalhcount]=wait(NULL);
+                gettimeofday(&globalend, NULL);
+                globalruntime[globalhcount]=(globalend.tv_sec - globalstart.tv_sec) + (globalend.tv_usec - globalstart.tv_usec) / 1000000.0;
+                globalhcount+=1;
+            }
+            else{
+                printf("Something bad happened.\n");
+                exit(1);
+            }
         }
-        else if(((strcmp(command, "./script.sh") == 0 )|| (strcmp(command, "sh script.sh")==0) || (strcmp(command, "bash script.sh")== 0))&& flag == 0){
-            globalcurrenttime=time(NULL);
-            globaltime[globalhcount]=strdup(ctime(&globalcurrenttime));
-            gettimeofday(&globalstart, NULL);
-            globalinputs[globalcount]=command;  //history
-            globalcount+=1;
-            read_file();
-            globalprocessid[globalhcount]=NULL;
-            gettimeofday(&globalend, NULL);
-            globalruntime[globalhcount]=(globalend.tv_sec - globalstart.tv_sec) + (globalend.tv_usec - globalstart.tv_usec) / 1000000.0;
-            globalhcount+=1;
-
-        }
-        else 
         free(command); // free malloc
     } while (!status);
 }
@@ -233,30 +229,6 @@ static void personal_handler(int signum){
         process_info();
         exit(1);
     }
-}
-
-int read_file(){
-    char buffer[200];
-    FILE* readfile=fopen("script.sh","r");
-
-    if (readfile==NULL){
-        printf("Error in reading the file"); //error check
-        return 1;
-    }
-
-    while (fgets(buffer, sizeof(buffer),readfile)!=NULL){
-        buffer[strcspn(buffer, "\n")] = '\0';
-        for (int i=0;i<strlen(buffer);i++){        //check for backslash and quotes
-            if (buffer[i]== '\\' || buffer[i]=='"'){
-                printf("OS_A2@custom_shell:~$ Invalid Input, contains backslashes or quotes!\n");
-                continue;
-            }
-        }
-        create_process_and_run(buffer);
-        
-    }
-    fclose(readfile);
-    return 0;
 }
 
 int main() {
