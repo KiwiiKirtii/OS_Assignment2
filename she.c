@@ -6,18 +6,15 @@
 #include <signal.h>
 #include <time.h>
 
-char** globalinputs; //declaring global variable to access in different functions //history
-int globalcount = 0;   //histoy
+char** globalinputs; //declaring global variable to access in different functions 
+int globalcount = 0;   
 int globalpid = 0,globalhcount = 0; //time
-double globalstart = 0, globalend = 0; 
-// int globalend;
-// int globalpid;
-double * globalstarttime;  //time
+double globalstart = 0, globalend = 0;
+double * globalstarttime; 
 double * globalruntime;
 int* globalprocessid;
-time_t* globaltime[20];
+time_t* globaltime[MAX];
 time_t globalcurrenttime;
-// int globalhcount;
 
 void show_history(){     //history
     for(int i=0;i<globalcount;i++){
@@ -42,16 +39,10 @@ char* read_user_input() {
     int length = strlen(buffer);
 
 
-    for (int i=0;i<length;i++){        //check for backslash and quotes
-        if (buffer[i]== '\\' || buffer[i]=='"'){
-            printf("OS_A2@custom_shell:~$ Invalid Input, contains backslashes or quotes!\n");
-            exit (1);
-        }
-    }
-
-    // for (int i=0;i<length;i++){   //replacing new line character
-    //     if (buffer[length-1]=="\n"){
-    //         buffer[length-1]="\0";
+    // for (int i=0;i<length;i++){        //check for backslash and quotes
+    //     if (buffer[i]== '\\' || buffer[i]=='"'){
+    //         printf("OS_A2@custom_shell:~$ Invalid Input, contains backslashes or quotes!\n");
+    //         exit(0);
     //     }
     // }
 
@@ -62,7 +53,7 @@ char* read_user_input() {
 int parse(char * buff, char** arr, char* delimiter){
     char* tok = strtok(buff,delimiter);
     int arr_size = 0;
-    while (tok != NULL ){            //////////////////////////////////////////
+    while (tok != NULL ){           
         arr[arr_size++] = tok;
         tok = strtok(NULL, delimiter);
     }
@@ -81,24 +72,18 @@ int create_process_and_run(char* command) {
     globalinputs[globalcount++] = strdup(command);
 
     int arg_size = parse(command, arr, "|");
-    // for (int j=0; j<arg_size; j++){
-    //     globalinputs[globalcount] = strdup(arr[j]);
-    //     globalcount+=1;
-    // }
     if (arg_size == 1) {
         // If there's only one command, no need for pipes
         int status = fork();
         if (status == 0) {
             char** args = (char**)malloc(MAX * sizeof(char*));
             parse(arr[0], args, " ");
-            //globalinputs[globalcount]=arr[0];   //history
-            //globalcount+=1;                 //history
-            
             execvp(args[0], args);
-            perror("execvp");
+            perror("Error: execvp");
             exit(1);
         } else if (status < 0) {
             printf("Something bad happened.\n");
+            exit(1);
         } else {
             globalcurrenttime=time(NULL);
             globaltime[globalhcount]=strdup(ctime(&globalcurrenttime));
@@ -113,46 +98,40 @@ int create_process_and_run(char* command) {
         int pipes[arg_size][2];  // Create an array of pipes
 
         for (int i = 0; i < arg_size; i++) {
-            if (i < arg_size - 1) {
-                if (pipe(pipes[i]) == -1) {
-                    perror("pipe");
-                    exit(1);
-                }
+            if (pipe(pipes[i]) == -1) {
+                perror("Error: pipeline.");
+                exit(1);
             }
 
             int stat = fork();
             if (stat == 0) {
                 // Child process
                 if (i > 0) {
-                    close(pipes[i - 1][1]);  // Close the write end of the previous pipe
-                    dup2(pipes[i - 1][0], STDIN_FILENO);  // Redirect stdin from the previous pipe
+                    close(pipes[i - 1][1]);  // write end of the previous pipe closed
+                    dup2(pipes[i - 1][0], STDIN_FILENO);  // stdin duplicated to read
                     close(pipes[i - 1][0]);
                 }
                 if (i < arg_size - 1) {
-                    close(pipes[i][0]);  // Close the read end of the current pipe
-                    dup2(pipes[i][1], STDOUT_FILENO);  // Redirect stdout to the current pipe
+                    close(pipes[i][0]);  // read end of the current pipe closed
+                    dup2(pipes[i][1], STDOUT_FILENO);  // stdout duplicated to write
                     close(pipes[i][1]);
                 }
-                // if (i == arg_size -1){
-                //     close(pipes[i][0]);
-                // }
 
                 char** args = (char**)malloc(MAX * sizeof(char*));
                 parse(arr[i], args, " ");
-                //globalinputs[globalcount]=arr[i];   //history
-                //globalcount+=1;                 //history
-                execvp(args[0], args);
-                perror("execvp");
+                execvp(args[0], args);                                 //execvp takes care of freeing allocated memory here
+                perror("Error: execvp");
+                free(args);
                 exit(1);
             } else if (stat > 0) {
                 // Parent process
                 
                 if (i > 0) {
-                    close(pipes[i - 1][0]);  // Close the read end of the previous pipe
-                    close(pipes[i - 1][1]);  // Close the write end of the previous pipe
+                    close(pipes[i - 1][0]);  // read end of the previous pipe closed
+                    close(pipes[i - 1][1]);  // write end of the previous pipe closed
                 }
 
-                // In the last iteration, wait for the last child process to complete
+                // last child process 
                 if (i == arg_size - 1) {
                     globalcurrenttime=time(NULL);
                     globaltime[globalhcount]=strdup(ctime(&globalcurrenttime));
@@ -173,6 +152,7 @@ int create_process_and_run(char* command) {
 
             } else {
                 printf("Something bad happened.\n");
+                exit(1);
             }
         }
     }
@@ -183,7 +163,6 @@ int create_process_and_run(char* command) {
 void process_info() {
     printf("%-50s%-15s%-15s%-30s\n", "Command Name", "PID", "Run Time", "Start Time");
     for (int i = 0; i < globalhcount; i++) {
-        // Remove the newline character from globaltime[i]
         char* new = strchr(globaltime[i], '\n');
         if (new != NULL) {
             *new = '\0';
@@ -202,12 +181,23 @@ void shell_loop() {
     int status;
     do {
         printf("OS_A2@custom_shell:~$ ");
+
+        int flag = 0;
         char* command = read_user_input();
-        if ((strcmp(command, "history")) != 0){
+
+
+        for (int i=0;i<strlen(command);i++){        //check for backslash and quotes
+            if (command[i]== '\\' || command[i]=='"'){
+                printf("OS_A2@custom_shell:~$ Invalid Input, contains backslashes or quotes!\n");
+                status = 0;
+                flag = 1;
+            }
+        }
+        if ((strcmp(command, "history")) != 0 && flag == 0){
             status = launch(command);
         }
         
-        else if ((strcmp(command, "history") == 0)){    //history
+        else if ((strcmp(command, "history") == 0) && flag == 0){    //history
             globalcurrenttime=time(NULL);
             globaltime[globalhcount]=strdup(ctime(&globalcurrenttime));
             globalstart=clock();
@@ -219,9 +209,8 @@ void shell_loop() {
             globalend=clock();
             globalruntime[globalhcount]=(globalend-globalstart) / CLOCKS_PER_SEC;
             globalhcount+=1;
-            //process_info();
         }
-        free(command); // Free the dynamically allocated input
+        free(command); // free malloc
     } while (!status);
 }
 
@@ -238,8 +227,7 @@ int main() {
     globalstarttime=(double*)malloc(MAX*sizeof(double));
     globalruntime=(double*)malloc(MAX*sizeof(double));
     globalprocessid=(int*)malloc(MAX*sizeof(int));
-    globalinputs=(char**)malloc(MAX*sizeof(char*)); //history
-    //globaltime=(time_t**)malloc(MAX*sizeof(time_t*));
+    globalinputs=(char**)malloc(MAX*sizeof(char*));
     globalcurrenttime=time(NULL);
 
     struct sigaction sig;
