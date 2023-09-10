@@ -4,12 +4,13 @@
 #include <string.h>
 #define MAX 1000
 #include <signal.h>
+#include <sys/time.h>
 #include <time.h>
 
 char** globalinputs; //declaring global variable to access in different functions 
 int globalcount = 0;   
 int globalpid = 0,globalhcount = 0; //time
-double globalstart = 0, globalend = 0;
+struct timeval globalstart, globalend;
 double * globalstarttime; 
 double * globalruntime;
 int* globalprocessid;
@@ -87,11 +88,10 @@ int create_process_and_run(char* command) {
         } else {
             globalcurrenttime=time(NULL);
             globaltime[globalhcount]=strdup(ctime(&globalcurrenttime));
-            globalstart=clock();     //time
+            gettimeofday(&globalstart, NULL);     //time
             globalprocessid[globalhcount]=wait(NULL);  //pid
-            globalend=clock();
-            globalruntime[globalhcount]= (globalend-globalstart) / CLOCKS_PER_SEC; //time
-            globalstarttime[globalhcount]=globalstart;
+            gettimeofday(&globalend, NULL);
+            globalruntime[globalhcount]= (globalend.tv_sec - globalstart.tv_sec) + (globalend.tv_usec - globalstart.tv_usec) / 1000000.0; //time
             globalhcount+=1;
         }
     } else {
@@ -135,13 +135,12 @@ int create_process_and_run(char* command) {
                 if (i == arg_size - 1) {
                     globalcurrenttime=time(NULL);
                     globaltime[globalhcount]=strdup(ctime(&globalcurrenttime));
-                    globalstart=clock();
-                    globalstarttime[globalhcount]=globalstart;
+                    gettimeofday(&globalstart, NULL);
                     close(pipes[i][0]);  // Close the read end of the last pipe
                     close(pipes[i][1]);  // Close the write end of the last pipe
                     globalprocessid[globalhcount]=wait(NULL);
-                    globalend=clock();
-                    globalruntime[globalhcount]=(globalend-globalstart) / CLOCKS_PER_SEC;
+                    gettimeofday(&globalend, NULL);
+                    globalruntime[globalhcount]=(globalend.tv_sec - globalstart.tv_sec) + (globalend.tv_usec - globalstart.tv_usec) / 1000000.0;
                     globalhcount+=1;
                     
                 }
@@ -200,14 +199,13 @@ void shell_loop() {
         else if ((strcmp(command, "history") == 0) && flag == 0){    //history
             globalcurrenttime=time(NULL);
             globaltime[globalhcount]=strdup(ctime(&globalcurrenttime));
-            globalstart=clock();
-            globalstarttime[globalhcount]=globalstart;
+            gettimeofday(&globalstart, NULL);
             globalinputs[globalcount]="history";  //history
             globalcount+=1;    //history
             show_history(); //history
             globalprocessid[globalhcount]=NULL;
-            globalend=clock();
-            globalruntime[globalhcount]=(globalend-globalstart) / CLOCKS_PER_SEC;
+            gettimeofday(&globalend, NULL);
+            globalruntime[globalhcount]=(globalend.tv_sec - globalstart.tv_sec) + (globalend.tv_usec - globalstart.tv_usec) / 1000000.0;
             globalhcount+=1;
         }
         free(command); // free malloc
